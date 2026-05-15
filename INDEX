@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TriviaArena</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #252535;
+    --accent: #f0c040;
+    --accent2: #7c6af7;
+    --text: #f0f0f8;
+    --text-muted: #8080a0;
+    --text-dim: #404060;
+    --green: #40e080;
+    --red: #f06060;
+    --radius: 12px;
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'Space Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .screen { display: none; width: 100%; max-width: 700px; }
+  .screen.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* LOBBY */
+  .logo {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .logo h1 {
+    font-family: var(--mono);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.03em;
+  }
+
+  .logo p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 1rem;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--text-dim); }
+
+  .btn {
+    width: 100%;
+    padding: 0.875rem;
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-accent { background: var(--accent); color: #0a0a0f; }
+  .btn-accent:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-accent:active { transform: translateY(0); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    margin-top: 0.75rem;
+  }
+
+  .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 80px;
+  }
+
+  .player-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.6rem 0.875rem;
+    background: var(--surface2);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .player-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+  }
+
+  .player-chip.you { border: 1px solid var(--accent); }
+  .player-chip.you .player-dot { background: var(--accent); }
+
+  .waiting {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    text-align: center;
+    padding: 1rem;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* GAME */
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .question-counter {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .timer-ring {
+    width: 52px;
+    height: 52px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .timer-ring svg {
+    transform: rotate(-90deg);
+    width: 52px;
+    height: 52px;
+  }
+
+  .timer-ring circle {
+    fill: none;
+    stroke-width: 3;
+    r: 22;
+    cx: 26;
+    cy: 26;
+  }
+
+  .timer-bg { stroke: var(--surface2); }
+  .timer-fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+
+  .timer-num {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .category-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--accent2);
+    color: white;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+  }
+
+  .question-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .answers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .answer-btn {
+    padding: 1rem;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    line-height: 1.4;
+  }
+
+  .answer-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--surface2); }
+  .answer-btn.correct { background: #40e08020; border-color: var(--green); color: var(--green); }
+  .answer-btn.wrong { background: #f0606020; border-color: var(--red); color: var(--red); }
+  .answer-btn.reveal { background: #40e08015; border-color: var(--green); color: var(--green); }
+  .answer-btn:disabled { cursor: default; }
+
+  .answer-letter {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--surface2);
+    text-align: center;
+    line-height: 20px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  /* SCOREBOARD */
+  .scoreboard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.3s;
+  }
+
+  .score-row.you { border-color: var(--accent); }
+  .score-row.leader { border-color: var(--green); }
+
+  .score-name { font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+  .score-pts { font-family: var(--mono); font-size: 1rem; font-weight: 700; color: var(--accent); }
+  .score-rank { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); }
+
+  .result-feedback {
+    text-align: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .result-feedback.correct { background: #40e08020; color: var(--green); }
+  .result-feedback.wrong { background: #f0606020; color: var(--red); }
+
+  /* FINAL */
+  .podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 2rem 0;
+  }
+
+  .podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .podium-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .podium-bar {
+    width: 80px;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 8px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .podium-bar.first { height: 120px; background: linear-gradient(to bottom, #f0c040, #c09020); color: #0a0a0f; }
+  .podium-bar.second { height: 90px; background: linear-gradient(to bottom, #a0a0b0, #707080); color: white; }
+  .podium-bar.third { height: 65px; background: linear-gradient(to bottom, #c07840, #905020); color: white; }
+
+  .podium-pts { font-family: var(--mono); font-size: 0.75rem; color: var(--text-muted); }
+
+  .winner-title {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .winner-sub {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOBBY SCREEN -->
+<div class="screen active" id="screen-lobby">
+  <div class="logo">
+    <h1>TRIVIA<span style="color:var(--text-muted)">/</span>ARENA</h1>
+    <p>Real-time multiplayer trivia · Up to 10 players</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Join the game</div>
+    <input type="text" id="player-name" placeholder="Enter your name..." maxlength="20"/>
+    <button class="btn btn-accent" onclick="joinGame()">Join Game →</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Players in lobby <span id="player-count" style="color:var(--accent);font-family:var(--mono)">0/10</span></div>
+    <div class="player-list" id="player-list">
+      <div class="waiting">Waiting for players to join...</div>
+    </div>
+  </div>
+
+  <button class="btn btn-ghost" id="start-btn" onclick="startGame()" style="display:none">Start Game ▶</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div class="screen" id="screen-game">
+  <div class="game-header">
+    <div>
+      <div class="question-counter" id="q-counter">Question 1 of 10</div>
+      <div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px;" id="q-category"></div>
+    </div>
+    <div class="timer-ring">
+      <svg viewBox="0 0 52 52">
+        <circle class="timer-bg" cx="26" cy="26" r="22"/>
+        <circle class="timer-fg" id="timer-circle" cx="26" cy="26" r="22"/>
+      </svg>
+      <div class="timer-num" id="timer-num">10</div>
+    </div>
+  </div>
+
+  <div class="question-card">
+    <div class="category-badge" id="q-badge">General</div>
+    <div class="question-text" id="q-text">Loading question...</div>
+  </div>
+
+  <div class="answers" id="answers"></div>
+
+  <div id="result-feedback" style="display:none"></div>
+
+  <div class="card">
+    <div class="card-title">Live scoreboard</div>
+    <div class="scoreboard" id="live-scoreboard"></div>
+  </div>
+</div>
+
+<!-- FINAL SCREEN -->
+<div class="screen" id="screen-final">
+  <div class="winner-title" id="winner-title">🏆 WINNER!</div>
+  <div class="winner-sub" id="winner-sub"></div>
+  <div class="podium" id="podium"></div>
+  <div class="card">
+    <div class="card-title">Final scores</div>
+    <div class="scoreboard" id="final-scoreboard"></div>
+  </div>
+  <button class="btn btn-accent" onclick="resetGame()" style="margin-top:1rem">Play Again →</button>
+</div>
+
+<script>
+const QUESTIONS = [
+  { q: "What does HTML stand for?", cat: "Web Dev", answers: ["HyperText Markup Language", "HighText Machine Language", "HyperText Machine Language", "HighText Markup Language"], correct: 0 },
+  { q: "Which language is primarily used for styling web pages?", cat: "Web Dev", answers: ["JavaScript", "Python", "CSS", "HTML"], correct: 2 },
+  { q: "What does SQL stand for?", cat: "Databases", answers: ["Structured Query Language", "Simple Query Language", "Standard Query Logic", "Sequential Query Language"], correct: 0 },
+  { q: "Which data structure uses LIFO (Last In First Out)?", cat: "CS Fundamentals", answers: ["Queue", "Stack", "Array", "Linked List"], correct: 1 },
+  { q: "What is the time complexity of binary search?", cat: "Algorithms", answers: ["O(n)", "O(n²)", "O(log n)", "O(1)"], correct: 2 },
+  { q: "Which of these is NOT a JavaScript framework?", cat: "Web Dev", answers: ["React", "Vue", "Django", "Angular"], correct: 2 },
+  { q: "What does API stand for?", cat: "CS Fundamentals", answers: ["Application Programming Interface", "Automated Protocol Integration", "Application Protocol Internet", "Automated Programming Interface"], correct: 0 },
+  { q: "Which sorting algorithm has the best average-case time complexity?", cat: "Algorithms", answers: ["Bubble Sort", "Insertion Sort", "Merge Sort", "Selection Sort"], correct: 2 },
+  { q: "What port does HTTPS use by default?", cat: "Networking", answers: ["80", "443", "8080", "3000"], correct: 1 },
+  { q: "In Python, what is used to define a function?", cat: "Python", answers: ["function", "fun", "def", "fn"], correct: 2 },
+  { q: "What does RAM stand for?", cat: "Hardware", answers: ["Random Access Memory", "Read Accessible Memory", "Rapid Access Memory", "Random Active Memory"], correct: 0 },
+  { q: "Which of these is a NoSQL database?", cat: "Databases", answers: ["MySQL", "PostgreSQL", "MongoDB", "SQLite"], correct: 2 },
+  { q: "What is the purpose of Git?", cat: "Tools", answers: ["Database management", "Version control", "Web hosting", "Code compilation"], correct: 1 },
+  { q: "What does CSS stand for?", cat: "Web Dev", answers: ["Creative Style Sheets", "Cascading Style Sheets", "Computer Style Sheets", "Colorful Style Sheets"], correct: 1 },
+  { q: "Which HTTP method is used to retrieve data?", cat: "Networking", answers: ["POST", "PUT", "DELETE", "GET"], correct: 3 },
+];
+
+const LETTERS = ['A', 'B', 'C', 'D'];
+const POINTS_CORRECT = 100;
+const BONUS_TIME_MAX = 50;
+const TIME_PER_Q = 10;
+
+let players = [];
+let myName = '';
+let currentQ = 0;
+let questions = [];
+let timerInterval = null;
+let timeLeft = TIME_PER_Q;
+let answered = false;
+let scores = {};
+
+// Simulate bot players joining
+const BOT_NAMES = ['Alex_UMD', 'CodeWiz99', 'TriviaKing', 'ByteMe'];
+let botsJoined = false;
+
+function joinGame() {
+  const input = document.getElementById('player-name');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  myName = name;
+  addPlayer(name, true);
+  input.disabled = true;
+  document.querySelector('.btn-accent').disabled = true;
+  document.querySelector('.btn-accent').textContent = 'Joined ✓';
+
+  // Simulate bots joining after delay
+  if (!botsJoined) {
+    botsJoined = true;
+    BOT_NAMES.forEach((bot, i) => {
+      setTimeout(() => addPlayer(bot, false), (i + 1) * 800);
+    });
+    setTimeout(() => {
+      document.getElementById('start-btn').style.display = 'block';
+    }, BOT_NAMES.length * 800 + 500);
+  }
+}
+
+function addPlayer(name, isYou) {
+  if (players.find(p => p.name === name)) return;
+  players.push({ name, isYou });
+  scores[name] = 0;
+  renderLobby();
+}
+
+function renderLobby() {
+  const list = document.getElementById('player-list');
+  document.getElementById('player-count').textContent = `${players.length}/10`;
+  list.innerHTML = players.map(p => `
+    <div class="player-chip ${p.isYou ? 'you' : ''}">
+      <div class="player-dot"></div>
+      ${p.name}${p.isYou ? ' <span style="font-size:0.7rem;color:var(--text-dim);margin-left:4px">(you)</span>' : ''}
+    </div>
+  `).join('');
+}
+
+function startGame() {
+  if (!myName) { alert('Enter your name first!'); return; }
+  questions = [...QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 10);
+  currentQ = 0;
+  Object.keys(scores).forEach(k => scores[k] = 0);
+  showScreen('game');
+  loadQuestion();
+}
+
+function loadQuestion() {
+  answered = false;
+  timeLeft = TIME_PER_Q;
+  const q = questions[currentQ];
+
+  document.getElementById('q-counter').textContent = `Question ${currentQ + 1} of ${questions.length}`;
+  document.getElementById('q-category').textContent = q.cat;
+  document.getElementById('q-badge').textContent = q.cat;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('result-feedback').style.display = 'none';
+
+  const answersEl = document.getElementById('answers');
+  answersEl.innerHTML = q.answers.map((a, i) => `
+    <button class="answer-btn" onclick="selectAnswer(${i})">
+      <span class="answer-letter">${LETTERS[i]}</span>${a}
+    </button>
+  `).join('');
+
+  updateTimer();
+  startTimer();
+  renderScoreboard('live-scoreboard');
+  simulateBotAnswers();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  const circumference = 2 * Math.PI * 22;
+  const circle = document.getElementById('timer-circle');
+  circle.style.strokeDasharray = circumference;
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimer();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!answered) timeUp();
+    }
+  }, 1000);
+}
+
+function updateTimer() {
+  const circumference = 2 * Math.PI * 22;
+  const circle = document.getElementById('timer-circle');
+  const num = document.getElementById('timer-num');
+  const pct = timeLeft / TIME_PER_Q;
+  circle.style.strokeDashoffset = circumference * (1 - pct);
+  circle.style.stroke = timeLeft > 5 ? 'var(--accent)' : 'var(--red)';
+  num.style.color = timeLeft > 5 ? 'var(--accent)' : 'var(--red)';
+  num.textContent = timeLeft;
+}
+
+function selectAnswer(idx) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timerInterval);
+
+  const q = questions[currentQ];
+  const btns = document.querySelectorAll('.answer-btn');
+  btns.forEach(b => b.disabled = true);
+
+  const isCorrect = idx === q.correct;
+
+  if (isCorrect) {
+    btns[idx].classList.add('correct');
+    const bonus = Math.round((timeLeft / TIME_PER_Q) * BONUS_TIME_MAX);
+    scores[myName] += POINTS_CORRECT + bonus;
+    showFeedback(true, `+${POINTS_CORRECT + bonus} pts (${bonus} speed bonus)`);
+  } else {
+    btns[idx].classList.add('wrong');
+    btns[q.correct].classList.add('reveal');
+    showFeedback(false, `Correct answer: ${q.answers[q.correct]}`);
+  }
+
+  renderScoreboard('live-scoreboard');
+  setTimeout(nextQuestion, 2500);
+}
+
+function timeUp() {
+  answered = true;
+  const q = questions[currentQ];
+  const btns = document.querySelectorAll('.answer-btn');
+  btns.forEach(b => b.disabled = true);
+  btns[q.correct].classList.add('reveal');
+  showFeedback(false, "Time's up!");
+  renderScoreboard('live-scoreboard');
+  setTimeout(nextQuestion, 2000);
+}
+
+function showFeedback(correct, msg) {
+  const el = document.getElementById('result-feedback');
+  el.style.display = 'block';
+  el.className = `result-feedback ${correct ? 'correct' : 'wrong'}`;
+  el.textContent = correct ? `✓ Correct! ${msg}` : `✗ ${msg}`;
+}
+
+function simulateBotAnswers() {
+  const q = questions[currentQ];
+  players.filter(p => !p.isYou).forEach(bot => {
+    const delay = 1000 + Math.random() * 7000;
+    const correct = Math.random() < 0.6;
+    setTimeout(() => {
+      if (!answered) return;
+      if (correct) {
+        const timeBonus = Math.round(((TIME_PER_Q - delay / 1000) / TIME_PER_Q) * BONUS_TIME_MAX);
+        scores[bot.name] += POINTS_CORRECT + Math.max(0, timeBonus);
+      }
+    }, delay);
+  });
+
+  // Ensure bot scores are updated before next question
+  players.filter(p => !p.isYou).forEach(bot => {
+    const correct = Math.random() < 0.6;
+    if (correct) {
+      const bonus = Math.round(Math.random() * BONUS_TIME_MAX);
+      setTimeout(() => { scores[bot.name] += POINTS_CORRECT + bonus; }, 100);
+    }
+  });
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) {
+    showFinalScreen();
+  } else {
+    loadQuestion();
+  }
+}
+
+function renderScoreboard(id) {
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  document.getElementById(id).innerHTML = sorted.map(([name, pts], i) => `
+    <div class="score-row ${name === myName ? 'you' : ''} ${i === 0 ? 'leader' : ''}">
+      <div class="score-name">
+        <span class="score-rank">#${i + 1}</span>
+        ${name}${name === myName ? ' <span style="font-size:0.7rem;color:var(--text-dim)">(you)</span>' : ''}
+      </div>
+      <div class="score-pts">${pts}</div>
+    </div>
+  `).join('');
+}
+
+function showFinalScreen() {
+  showScreen('final');
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const winner = sorted[0][0];
+  document.getElementById('winner-title').textContent = winner === myName ? '🏆 YOU WIN!' : `🏆 ${winner} WINS!`;
+  document.getElementById('winner-sub').textContent = winner === myName ? 'Incredible! You topped the leaderboard.' : 'Better luck next time — study up!';
+
+  const podium = document.getElementById('podium');
+  const top3 = sorted.slice(0, 3);
+  const order = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3.length === 2 ? [top3[1], top3[0]] : [top3[0]];
+  const classes = top3.length >= 3 ? ['second', 'first', 'third'] : top3.length === 2 ? ['second', 'first'] : ['first'];
+
+  podium.innerHTML = order.map((p, i) => `
+    <div class="podium-place">
+      <div class="podium-name">${p[0]}</div>
+      <div class="podium-bar ${classes[i]}">${classes[i] === 'first' ? '1st' : classes[i] === 'second' ? '2nd' : '3rd'}</div>
+      <div class="podium-pts">${p[1]} pts</div>
+    </div>
+  `).join('');
+
+  renderScoreboard('final-scoreboard');
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+function resetGame() {
+  players = [];
+  scores = {};
+  myName = '';
+  botsJoined = false;
+  currentQ = 0;
+  clearInterval(timerInterval);
+
+  document.getElementById('player-name').disabled = false;
+  document.getElementById('player-name').value = '';
+  document.querySelector('.btn-accent').disabled = false;
+  document.querySelector('.btn-accent').textContent = 'Join Game →';
+  document.getElementById('start-btn').style.display = 'none';
+  document.getElementById('player-list').innerHTML = '<div class="waiting">Waiting for players to join...</div>';
+  document.getElementById('player-count').textContent = '0/10';
+
+  showScreen('lobby');
+}
+</script>
+</body>
+</html>
