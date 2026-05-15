@@ -70,4 +70,4 @@ Then open `http://localhost:3000` in multiple browser tabs to test multiplayer.
 
 ## Author
 
-Alex Johnson · [LinkedIn](https://linkedin.com/in/your-profile) · [GitHub](https://github.com/your-username)
+Ezio Zaytoun
